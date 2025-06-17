@@ -3,7 +3,7 @@ import openai
 
 st.title("Pseudo ChatGPT")
 
-openai.api_key = st.secrets["api_key"]
+client = st.secrets["openai"]["api_key"]
 #openai.api_key = st.secrets["openai"]["api_key"]
 #client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -23,7 +23,7 @@ if prompt := st.chat_input("What is up?"):
         st.markdown(prompt)
     
     with st.chat_message("assistant", avatar="🤖"):
-        stream = openai.api_key.chat.completions.create(
+        stream = client.chat.completions.create(
             model=st.session_state["openai_model"],
             messages=[
                 {"role": m["role"], "content": m["content"]}
