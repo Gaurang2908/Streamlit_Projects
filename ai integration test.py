@@ -3,7 +3,7 @@ import numpy as np
 
 with st.chat_message("assistant"):
     st.write("Hello human")
-    st.pie_chart(np.random.randn(40, 4))
+    st.line_chart(np.random.randn(40, 4))
 
 prompt = st.chat_input("Write something")
 if prompt :
