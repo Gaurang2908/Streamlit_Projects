@@ -21,7 +21,7 @@ if prompt := st.chat_input("What is up?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user", avatar="🙇‍♂️"):
         st.markdown(prompt)
-        
+    
     with st.chat_message("assistant", avatar="🤖"):
         stream = client.chat.completions.create(
             model=st.session_state["openai_model"],
