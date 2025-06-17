@@ -9,7 +9,7 @@ prompt = st.chat_input("Write something")
 if prompt :
     st.write(f"User has sent the following prompt: {prompt}")
 
-st.tile("Echo Bot")
+st.title("Echo Bot")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
