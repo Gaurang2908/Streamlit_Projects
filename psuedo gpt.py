@@ -61,4 +61,20 @@ def ask_openai(prompt):
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user",
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.2
+    )
+    return response.choices[0].message.content.strip()
+
+# Streamlit UI
+st.set_page_config(page_title="OpenAI Q&A", layout="centered")
+st.title("Ask OpenAI")
+
+load_openai_key()
+
+query = st.text_input("Ask something:")
+if query:
+    answer = ask_openai(query)
+    st.write(answer)
+
