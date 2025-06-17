@@ -5,3 +5,4 @@ faiss-cpu
 matplotlib
 pillow
 numpy
+python-dotenv
