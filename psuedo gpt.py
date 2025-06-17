@@ -23,7 +23,7 @@ if prompt := st.chat_input("What is up?"):
         st.markdown(prompt)
     
     with st.chat_message("assistant", avatar="🤖"):
-        stream = client.chat.completions.create(
+        stream = openai.api_key.chat.completions.create(
             model=st.session_state["openai_model"],
             messages=[
                 {"role": m["role"], "content": m["content"]}
