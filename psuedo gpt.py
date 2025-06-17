@@ -55,6 +55,7 @@ def load_openai_key():
     if not openai.api_key:
         st.error("OpenAI API key not found.")
         st.stop()
+st.write("Key loaded:", bool(openai.api_key))
 
 # Ask a question to ChatGPT (GPT-4)
 def ask_chatgpt(prompt):
