@@ -3,7 +3,8 @@ import openai
 
 st.title("Pseudo ChatGPT")
 
-openai.api_key = st.secrets["openai"]["api_key"]
+openai.api_key = st.secrets["api_key"]
+#openai.api_key = st.secrets["openai"]["api_key"]
 #client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 if "openai_model" not in st.session_state:
