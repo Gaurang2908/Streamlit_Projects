@@ -35,6 +35,7 @@ if prompt := st.chat_input("What is up?"):
     st.session_state.messages.append({"role": "assistant", "content": response})"""
 
 
+
 import streamlit as st
 import openai
 import os
@@ -51,13 +52,14 @@ def load_openai_key():
         except ImportError:
             st.warning("Install python-dotenv if using a .env file locally.")
 
-    """if not openai.api_key:
+    if not openai.api_key:
         st.error("OpenAI API key not found.")
-        st.stop()"""
+        st.stop()
 
-# Ask OpenAI a question
+# Ask OpenAI a question using migrate-compatible format
 def ask_openai(prompt):
-    response = openai.ChatCompletion.create(
+    client = openai.OpenAI()
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
@@ -77,4 +79,3 @@ query = st.text_input("Ask something:")
 if query:
     answer = ask_openai(query)
     st.write(answer)
-
