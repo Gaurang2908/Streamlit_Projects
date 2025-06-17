@@ -37,43 +37,33 @@ if prompt := st.chat_input("What is up?"):
 
 
 import streamlit as st
-import openai
 import os
+from openai import OpenAI
 
-# Load OpenAI API key securely
-def load_openai_key():
-    if "openai" in st.secrets:
-        openai.api_key = st.secrets["api_key"]
-    else:
-        try:
-            from dotenv import load_dotenv
-            load_dotenv()
-            openai.api_key = os.getenv("OPENAI_API_KEY")
-        except ImportError:
-            st.warning("Install python-dotenv if using a .env file locally.")
+# Load OpenAI API key using migrate method
+client = OpenAI(
+    api_key=st.secrets["api_key"] 
+    if "openai" in st.secrets else os.getenv("OPENAI_API_KEY")
+)
 
-    if not openai.api_key:
-        st.error("OpenAI API key not found.")
-        st.stop()
+if not client.api_key:
+    st.error("OpenAI API key not found.")
+    st.stop()
 
-# Ask OpenAI a question using migrate-compatible format
+# Ask OpenAI a question using the migrate method and client.completions.create
+
 def ask_openai(prompt):
-    client = openai.OpenAI()
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
-        ],
+    response = client.completions.create(
+        model="text-davinci-003",
+        prompt=prompt,
+        max_tokens=150,
         temperature=0.2
     )
-    return response.choices[0].message.content.strip()
+    return response.choices[0].text.strip()
 
 # Streamlit UI
 st.set_page_config(page_title="OpenAI Q&A", layout="centered")
 st.title("Ask OpenAI")
-
-load_openai_key()
 
 query = st.text_input("Ask something:")
 if query:
