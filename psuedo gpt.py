@@ -45,7 +45,7 @@ import os
 # Load OpenAI key securely
 def load_openai_key():
     if "openai" in st.secrets:
-        openai.api_key = st.secrets["openai"]["api_key"]
+        openai.api_key = st.secrets["api_key"]
     else:
         try:
             from dotenv import load_dotenv
