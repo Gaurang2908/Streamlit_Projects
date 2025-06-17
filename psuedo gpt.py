@@ -51,9 +51,9 @@ def load_openai_key():
         except ImportError:
             st.warning("Install python-dotenv if using a .env file locally.")
 
-    if not openai.api_key:
+    """if not openai.api_key:
         st.error("OpenAI API key not found.")
-        st.stop()
+        st.stop()"""
 
 # Ask OpenAI a question
 def ask_openai(prompt):
