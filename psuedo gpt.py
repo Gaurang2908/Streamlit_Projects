@@ -38,6 +38,7 @@ if prompt := st.chat_input("What is up?"):
 import streamlit as st
 import openai
 from openai import OpenAIError, RateLimitError
+import time
 
 # Set API key
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -77,6 +78,13 @@ if prompt := st.chat_input("What is up?"):
     
     except RateLimitError:
         st.error("⚠️ Rate limit hit. Try again later.")
+        time.sleep(1)
+        response = openai.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=True
+        )
+    response = st.write_stream(response)
     except OpenAIError as e:
         st.error(f"❌ OpenAI API error: {e}")
 
