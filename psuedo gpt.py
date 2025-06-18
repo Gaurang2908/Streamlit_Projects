@@ -1,59 +1,61 @@
 import streamlit as st
-import openai 
-from openai import OpenAI
+from openai import OpenAI, RateLimitError, APIError
+import time
 
-st.title("Pseudo ChatGPT")
+# Title
+st.title("ChatGPT-like clone 🧠")
 
-#openai.api_key = st.secrets["api_key"]
-#openai.api_key = st.secrets["openai"]["api_key"]
-#client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
+# API setup
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-if "openai_model" not in st.session_state:
-    st.session_state["openai_model"] = "gpt-3.5-turbo"
+# Model
+MODEL = "gpt-3.5-turbo"
 
+# Init session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# Display previous messages
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-if prompt := st.chat_input("What's up?"):
+# User input
+if prompt := st.chat_input("Ask me anything..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    
     with st.chat_message("user"):
         st.markdown(prompt)
-    
+
     with st.chat_message("assistant"):
-        try:
-            # Limit token history to avoid overload (optional but useful)
-            context = st.session_state.messages[-10:]
+        context = st.session_state.messages[-10:]  # Limit context
 
-            stream = client.chat.completions.create(
-                model=st.session_state["openai_model"],
-                messages=context,
-                stream=True,
-            )
-            response = st.write_stream(stream)
+        max_retries = 3
+        wait = 5
+        success = False
 
-        except RateLimitError:
-            st.warning(" OpenAI Rate limit hit. Waiting 5 seconds...")
-            time.sleep(5)
+        for attempt in range(max_retries):
             try:
                 stream = client.chat.completions.create(
-                    model=st.session_state["openai_model"],
+                    model=MODEL,
                     messages=context,
                     stream=True,
                 )
                 response = st.write_stream(stream)
-            except RateLimitError:
-                st.error("❌ Still rate-limited. Try again in a minute.")
-                response = "[Rate limited]"
+                success = True
+                break
 
-        except APIError as e:
-            st.error(f"⚠️ OpenAI API Error: {e}")
-            response = "[API Error]"
-    # Save assistant reply to state
+            except RateLimitError:
+                st.warning(f"⏳ Rate limit hit. Retrying in {wait} sec... (Attempt {attempt+1}/{max_retries})")
+                time.sleep(wait)
+                wait *= 2  # exponential backoff
+
+            except APIError as e:
+                st.error(f"💥 OpenAI API error: {e}")
+                response = "[API Error]"
+                break
+
+        if not success:
+            response = "⚠️ Failed after multiple retries due to rate limits. Please try again later."
+
+    # Save assistant message
     st.session_state.messages.append({"role": "assistant", "content": response})
