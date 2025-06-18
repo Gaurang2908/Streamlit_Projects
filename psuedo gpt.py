@@ -3,7 +3,7 @@ import openai
 
 st.title("Pseudo ChatGPT")
 
-openai.api_key = st.secrets["openai"]["api_key"]
+openai.api_key = st.secrets["api_key"]
 #openai.api_key = st.secrets["openai"]["api_key"]
 #client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -18,18 +18,23 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 if prompt := st.chat_input("What is up?"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    
     with st.chat_message("user", avatar="🙇‍♂️"):
         st.markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
     
     with st.chat_message("assistant", avatar="🤖"):
-        stream = client.chat.completions.create(
+        message_placeholder = st.empty()
+        full_response = ""
+        for response in openai.ChatCompletion.create(
             model=st.session_state["openai_model"],
             messages=[
                 {"role": m["role"], "content": m["content"]}
                 for m in st.session_state.messages
             ],
             stream=True,
-        )
-        response = st.write_stream(stream)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+        ):
+            full_response += response.choices[0].delta.get("content", "")
+            message_placeholder.markdown(full_response + " ")
+        message_placeholder.markdown(full_response)
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
