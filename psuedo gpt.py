@@ -84,7 +84,7 @@ if prompt := st.chat_input("What is up?"):
             messages=messages,
             stream=True
         )
-    response = st.write_stream(response)
+        response = st.write_stream(response)
     except OpenAIError as e:
         st.error(f"❌ OpenAI API error: {e}")
 
