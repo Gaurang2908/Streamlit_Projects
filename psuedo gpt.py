@@ -21,18 +21,39 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 if prompt := st.chat_input("What's up?"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
     with st.chat_message("user"):
         st.markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
+    
     with st.chat_message("assistant"):
-        stream = client.chat.completions.create(
-            model=st.session_state["openai_model"],
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
-        response = st.write_stream(stream)
+        try:
+            # Limit token history to avoid overload (optional but useful)
+            context = st.session_state.messages[-10:]
+
+            stream = client.chat.completions.create(
+                model=st.session_state["openai_model"],
+                messages=context,
+                stream=True,
+            )
+            response = st.write_stream(stream)
+
+        except RateLimitError:
+            st.warning(" OpenAI Rate limit hit. Waiting 5 seconds...")
+            time.sleep(5)
+            try:
+                stream = client.chat.completions.create(
+                    model=st.session_state["openai_model"],
+                    messages=context,
+                    stream=True,
+                )
+                response = st.write_stream(stream)
+            except RateLimitError:
+                st.error("❌ Still rate-limited. Try again in a minute.")
+                response = "[Rate limited]"
+
+        except APIError as e:
+            st.error(f"⚠️ OpenAI API Error: {e}")
+            response = "[API Error]"
+    # Save assistant reply to state
     st.session_state.messages.append({"role": "assistant", "content": response})
