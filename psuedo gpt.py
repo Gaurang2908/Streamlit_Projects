@@ -11,6 +11,7 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 # Model
 MODEL = "gpt-3.5-turbo"
 
+raise RateLimitError("Simulated test error")
 # Init session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
