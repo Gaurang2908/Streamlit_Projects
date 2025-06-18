@@ -35,10 +35,13 @@ if prompt := st.chat_input("What is up?"):
     st.session_state.messages.append({"role": "assistant", "content": response})"""
 
 
-from openai import OpenAI
+import openai
 import streamlit as st
 
 st.title("ChatGPT-like clone")
+
+model = st.selectbox("Choose a model", ["gpt-3.5-turbo", "gpt-4"])
+temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
