@@ -7,7 +7,7 @@ st.title("Pseudo ChatGPT")
 #openai.api_key = st.secrets["openai"]["api_key"]
 #client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+client = openai(api_key=st.secrets["OPENAI_API_KEY"])
 
 if "openai_model" not in st.session_state:
     st.session_state["openai_model"] = "gpt-3.5-turbo"
