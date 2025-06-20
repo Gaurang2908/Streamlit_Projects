@@ -1,4 +1,5 @@
 import streamlit as st
+import openai
 from openai import OpenAI, RateLimitError, APIError
 import time
 
@@ -9,7 +10,7 @@ st.title("ChatGPT-like clone 🧠")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Model
-MODEL = "gpt-4"
+MODEL = "gpt-3.5-turbo"
 
 #raise RateLimitError("Simulated test error")
 
@@ -32,17 +33,19 @@ if prompt := st.chat_input("Ask me anything..."):
         context = st.session_state.messages[-10:]  # Limit context
 
         max_retries = 3
-        wait = 5
+        wait = 10
         success = False
 
         for attempt in range(max_retries):
             try:
-                stream = client.chat.completions.create(
+                completion = client.chat.completions.create(
                     model=MODEL,
                     messages=context,
-                    stream=True,
+                    stream=False,
                 )
-                response = st.write_stream(stream)
+                response = completion.choices[0].message.content
+                st.markdown(response)
+
                 success = True
                 break
 
