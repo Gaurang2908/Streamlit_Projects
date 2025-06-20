@@ -1,5 +1,5 @@
 import streamlit as st
-import openai
+#import openai
 from openai import OpenAI, RateLimitError, APIError
 import time
 
