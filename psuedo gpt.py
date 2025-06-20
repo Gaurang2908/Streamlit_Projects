@@ -4,7 +4,7 @@ from openai import OpenAI, RateLimitError, APIError
 import time
 
 # Title
-st.title("ChatGPT-like clone 🧠")
+st.title("PseudoGPT")
 
 # API setup
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
