@@ -9,7 +9,7 @@ st.title("ChatGPT-like clone 🧠")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Model
-MODEL = "gpt-3.5-turbo"
+MODEL = "gpt-4"
 
 #raise RateLimitError("Simulated test error")
 
