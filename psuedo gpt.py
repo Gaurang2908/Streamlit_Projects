@@ -4,14 +4,14 @@ import time
 import tiktoken
 
 # Constants
-MODEL = "gpt-4"
-TPM_LIMIT = 100000  # Adjust based on your plan and model quota
+MODEL = "gpt-3.5-turbo"
+TPM_LIMIT = 90000  # Adjust this if your quota is higher
 
-# API Client
+# API client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Token counter
-def count_tokens(messages, model="gpt-4"):
+def count_tokens(messages, model="gpt-3.5-turbo"):
     encoding = tiktoken.encoding_for_model(model)
     num_tokens = 0
     for msg in messages:
@@ -22,7 +22,7 @@ def count_tokens(messages, model="gpt-4"):
     return num_tokens
 
 # UI
-st.title("PseudoGPT")
+st.title("ChatGPT-like clone 🧠")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -73,7 +73,5 @@ if prompt := st.chat_input("Ask me anything..."):
 
         if not success:
             response = "⚠️ Failed after multiple retries due to rate limits. Please try again later."
-
-    st.session_state.messages.append({"role": "assistant", "content": response})
 
     st.session_state.messages.append({"role": "assistant", "content": response})
