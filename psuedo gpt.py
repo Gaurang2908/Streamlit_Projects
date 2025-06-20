@@ -22,7 +22,7 @@ def count_tokens(messages, model="gpt-3.5-turbo"):
     return num_tokens
 
 # UI
-st.title("ChatGPT-like clone 🧠")
+st.title("PseudoGPT")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
