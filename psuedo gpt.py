@@ -34,18 +34,14 @@ Always use the uploaded CSV data to answer questions. If information is missing,
 def is_bad_query(user_input: str) -> bool:
     text = user_input.lower().strip()
 
-    # Always allow short/friendly/casual greetings or openers
-    soft_openers = ["hi", "hello", "hey", "start", "begin", "ok", "okay", "ready", "good morning", "thanks", "thank you","yes","no"]
-    if any(word in text for word in soft_openers) or len(text.split()) <= 2:
-        return False
-
-    # Block clearly unrelated topics
+    # Block only obviously unrelated/offensive queries
     blocklist = [
-        "code", "python", "javascript", "capital of", "president", "movie", "actor", "celebrity",
-        "joke", "riddle", "religion", "god", "kill", "hack", "game", "nude"
+        "code", "python", "javascript", "html", "css", "capital of", "president",
+        "celebrity", "movie", "joke", "riddle", "religion", "god", "hack", "kill", 
+        "murder", "bomb", "sex", "nude", "dating", "love", "game", "anime", "song", "music"
     ]
-    return any(term in text for term in blocklist)
 
+    return any(term in text for term in blocklist)
 
 # Token counter
 def count_tokens(messages, model="gpt-3.5-turbo"):
@@ -60,9 +56,9 @@ def count_tokens(messages, model="gpt-3.5-turbo"):
 
 # UI
 st.title("PseudoGPT")
+
 uploaded_file = st.file_uploader("Upload your corporate wellness data (CSV)", type="csv")
 
-# CSV handling
 df = None
 data_context = ""
 if uploaded_file is not None:
@@ -106,6 +102,7 @@ if prompt := st.chat_input("Ask me anything..."):
         # GPT logic
         context = [{"role": "system", "content": SYSTEM_PROMPT}] + st.session_state.messages[-10:]
         context[1]["content"] = f"{data_context}\n\nUser Query: {prompt}"
+
         tokens_used = count_tokens(context)
 
         if tokens_used > TPM_LIMIT:
@@ -138,8 +135,9 @@ if prompt := st.chat_input("Ask me anything..."):
         if not success:
             response = "⚠️ Failed after multiple retries due to rate limits. Please try again later."
 
-    # ✅ Show and store the assistant response after GPT processing is done
+    # AFTER GPT call finishes...
     with st.chat_message("assistant", avatar="👾"):
         st.markdown(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
+
