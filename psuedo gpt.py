@@ -22,6 +22,8 @@ ONLY respond to questions about:
 - Absenteeism, presenteeism, productivity
 - Workplace mental and physical health trends
 
+If the user greets you or thanks you, respond politely and guide them back to wellness insights.
+
 DO NOT answer questions unrelated to workplace wellness (e.g., code, philosophy, politics, general trivia). 
 If asked such questions, politely say: "I'm designed to assist only with corporate health & wellness insights."
 
@@ -30,10 +32,18 @@ I'd appreciate it if you could be concise, insightful, and focused on business i
 """
 
 # ✅ [ADDED] Check if query is wellness-related
-def is_health_query(user_input: str) -> bool:
-    keywords = ["wellness", "health", "absenteeism", "stress", "mental", "burnout",
-                "productivity", "screening", "chronic", "fatigue", "risk", "engagement"]
-    return any(word in user_input.lower() for word in keywords)
+def is_bad_query(user_input: str) -> bool:
+    # Allow casual/neutral things like greetings
+    greetings = ["hi", "hello", "hey", "thanks", "thank you"]
+    if any(greet in user_input.lower() for greet in greetings):
+        return False
+
+    # Block only clearly unrelated things
+    blocklist = [
+        "code", "python", "javascript", "capital of", "president", "game", "movie",
+        "joke", "riddle", "love", "god", "religion", "death", "kill", "hack"
+    ]
+    return any(word in user_input.lower() for word in blocklist)
 
 # ✅ [ADDED] File uploader for CSV data
 uploaded_file = st.file_uploader("Upload your corporate wellness data (CSV)", type="csv")
@@ -82,8 +92,8 @@ if prompt := st.chat_input("Ask me anything..."):
     with st.chat_message("assistant", avatar="👾"):
 
         # ✅ [ADDED] Filter query scope before processing
-        if not is_health_query(prompt):
-            response = "I'm designed to assist only with corporate health & wellness insights. Please rephrase your question accordingly."
+        if is_bad_query(prompt):
+            response = "I'm designed to assist only with corporate health & wellness insights. Please rephrase your question."
         elif not uploaded_file:
             response = "Please upload a CSV file with corporate wellness data before asking questions."
         else:
