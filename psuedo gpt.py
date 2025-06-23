@@ -34,9 +34,10 @@ I'd appreciate it if you could be concise, insightful, and focused on business i
 # ✅ [ADDED] Check if query is wellness-related
 def is_bad_query(user_input: str) -> bool:
     # Allow casual/neutral things like greetings
-    greetings = ["hi", "hello", "hey", "thanks", "thank you"]
+    """greetings = ["hi", "hello", "hey", "thanks", "thank you"]
     if any(greet in user_input.lower() for greet in greetings):
         return False
+    """
 
     # Block only clearly unrelated things
     blocklist = [
