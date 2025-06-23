@@ -7,3 +7,6 @@ pillow
 numpy
 python-dotenv
 tiktoken
+pandas
+numpy
+matplotlib
