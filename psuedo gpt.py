@@ -34,14 +34,14 @@ Always use the uploaded CSV data to answer questions. If information is missing,
 def is_bad_query(user_input: str) -> bool:
     text = user_input.lower().strip()
 
-    # Block only obviously unrelated/offensive queries
     blocklist = [
         "code", "python", "javascript", "html", "css", "capital of", "president",
-        "celebrity", "movie", "joke", "riddle", "religion", "god", "hack", "kill", 
-        "murder", "bomb", "sex", "nude", "dating", "love", "game", "anime", "song", "music"
+        "celebrity", "movie", "joke", "riddle", "hack", "kill", "religion", "nude",
+        "sex", "love", "game", "anime", "song", "music"
     ]
 
     return any(term in text for term in blocklist)
+
 
 # Token counter
 def count_tokens(messages, model="gpt-3.5-turbo"):
@@ -95,21 +95,18 @@ if prompt := st.chat_input("Ask me anything..."):
 
     # Process assistant reply logic
     if is_bad_query(prompt):
-        response = "🚫 I'm designed to assist only with corporate health & wellness insights. Please rephrase your question."
+        response = "I'm designed to assist only with corporate health & wellness insights. Please rephrase your question."
     elif df is None:
-        response = "📂 Please upload a valid CSV file to get insights."
+        response = "Please upload a valid CSV file to get insights."
     else:
         # GPT logic
-        # Build context with system prompt
         context = [{"role": "system", "content": SYSTEM_PROMPT}]
-        
-        # Add data context as assistant preamble if file is uploaded
         if df is not None:
             context.append({
                 "role": "assistant",
                 "content": f"{data_context}\n\n(Note: This is the dataset context you must consider before responding.)"
             })
-        # Add recent user history
+        
         context += st.session_state.messages[-10:]
 
         tokens_used = count_tokens(context)
