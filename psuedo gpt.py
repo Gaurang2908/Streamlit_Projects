@@ -32,14 +32,20 @@ Always use the uploaded CSV data to answer questions. If information is missing,
 
 # Smart query filter
 def is_bad_query(user_input: str) -> bool:
-    greetings = ["hi", "hello", "hey", "thanks", "thank you"]
-    if any(greet in user_input.lower() for greet in greetings):
+    text = user_input.lower().strip()
+
+    # Always allow short/friendly/casual greetings or openers
+    soft_openers = ["hi", "hello", "hey", "start", "begin", "ok", "okay", "ready", "good morning", "thanks", "thank you"]
+    if any(word in text for word in soft_openers) or len(text.split()) <= 2:
         return False
+
+    # Block clearly unrelated topics
     blocklist = [
-        "code", "python", "javascript", "capital of", "president", "game", "movie",
-        "joke", "riddle", "love", "god", "religion", "death", "kill", "hack"
+        "code", "python", "javascript", "capital of", "president", "movie", "actor", "celebrity",
+        "joke", "riddle", "religion", "god", "kill", "hack", "game", "nude"
     ]
-    return any(word in user_input.lower() for word in blocklist)
+    return any(term in text for term in blocklist)
+
 
 # Token counter
 def count_tokens(messages, model="gpt-3.5-turbo"):
