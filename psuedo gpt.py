@@ -53,15 +53,15 @@ if uploaded_file:
     df_description = df.describe(include='all').to_string()
     df_columns = ", ".join(df.columns)
     data_context = f"""
-This is the dataset you must use to answer all queries.
-
-Available columns: {df_columns}
-
-Dataset Summary (stats, categories, etc):
-{df_description}
-"""
-else:
-    data_context = ""  # Safe fallback if no file is uploaded
+    This is the dataset you must use to answer all queries.
+    
+    Available columns: {df_columns}
+    
+    Dataset Summary (stats, categories, etc):
+    {df_description}
+    """
+    else:
+        data_context = ""  # Safe fallback if no file is uploaded
 
 # Token counter
 def count_tokens(messages, model="gpt-3.5-turbo"):
