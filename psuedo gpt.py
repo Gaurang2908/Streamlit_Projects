@@ -89,7 +89,7 @@ if prompt := st.chat_input("Ask me anything..."):
         else:
             # ✅ [MODIFIED] Include system prompt + dataset context
             context = [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": SYSTEM_PROMPT} + st.session_state.messages[-10],
                 {"role": "user", "content": f"{data_context}\n\nUser Query: {prompt}"}
             ]
 
