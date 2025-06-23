@@ -100,8 +100,17 @@ if prompt := st.chat_input("Ask me anything..."):
         response = "📂 Please upload a valid CSV file to get insights."
     else:
         # GPT logic
-        context = [{"role": "system", "content": SYSTEM_PROMPT}] + st.session_state.messages[-10:]
-        context[1]["content"] = f"{data_context}\n\nUser Query: {prompt}"
+        # Build context with system prompt
+        context = [{"role": "system", "content": SYSTEM_PROMPT}]
+        
+        # Add data context as assistant preamble if file is uploaded
+        if df is not None:
+            context.append({
+                "role": "assistant",
+                "content": f"{data_context}\n\n(Note: This is the dataset context you must consider before responding.)"
+            })
+        # Add recent user history
+        context += st.session_state.messages[-10:]
 
         tokens_used = count_tokens(context)
 
