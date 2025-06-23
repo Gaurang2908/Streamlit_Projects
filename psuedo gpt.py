@@ -34,10 +34,10 @@ for msg in st.session_state.messages:
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar = "🙇‍♂️"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar = "🤖"):
         context = st.session_state.messages[-10:]
         tokens_used = count_tokens(context)
 
