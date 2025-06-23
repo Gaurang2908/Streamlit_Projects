@@ -35,7 +35,7 @@ def is_bad_query(user_input: str) -> bool:
     text = user_input.lower().strip()
 
     # Always allow short/friendly/casual greetings or openers
-    soft_openers = ["hi", "hello", "hey", "start", "begin", "ok", "okay", "ready", "good morning", "thanks", "thank you"]
+    soft_openers = ["hi", "hello", "hey", "start", "begin", "ok", "okay", "ready", "good morning", "thanks", "thank you","yes","no"]
     if any(word in text for word in soft_openers) or len(text.split()) <= 2:
         return False
 
