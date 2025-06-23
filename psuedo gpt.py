@@ -47,7 +47,7 @@ def is_bad_query(user_input: str) -> bool:
     return any(word in user_input.lower() for word in blocklist)
 
 # ✅ [ADDED] File uploader for CSV data
-'''uploaded_file = st.file_uploader("Upload your corporate wellness data (CSV)", type="csv")
+uploaded_file = st.file_uploader("Upload your corporate wellness data (CSV)", type="csv")
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
     df_description = df.describe(include='all').to_string()
@@ -62,7 +62,6 @@ if uploaded_file:
     """
 else:
     data_context = ""  # Safe fallback if no file is uploaded
-'''
 
 # Token counter
 def count_tokens(messages, model="gpt-3.5-turbo"):
