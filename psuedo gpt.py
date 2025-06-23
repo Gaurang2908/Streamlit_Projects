@@ -46,15 +46,15 @@ Always use the uploaded CSV data to answer questions. If information is missing,
 def is_bad_query(user_input: str) -> bool:
     text = user_input.lower().strip()
 
+    # Only block clearly irrelevant or unsafe queries
     blocklist = [
         "code", "python", "javascript", "html", "css", "capital of", "president",
         "celebrity", "movie", "joke", "riddle", "hack", "kill", "religion", "nude",
-        "sex", "love", "game", "anime", "song", "music"
+        "love", "game", "anime", "song", "music"
     ]
 
     return any(term in text for term in blocklist)
-
-
+    
 # Token counter
 def count_tokens(messages, model="gpt-3.5-turbo"):
     encoding = tiktoken.encoding_for_model(model)
