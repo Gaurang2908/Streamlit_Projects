@@ -1,3 +1,5 @@
+# VERSION WITH AUTO-PREDICTION REMOVED AND COLUMN DEFINITIONS CONTEXT ADDED
+
 import streamlit as st
 import pandas as pd
 import joblib
@@ -18,6 +20,17 @@ def load_model():
     return joblib.load("readmission_model.pkl")
 
 model = load_model()
+
+# Load column definitions from text file
+@st.cache_data
+def load_column_definitions():
+    try:
+        with open("column_definitions.txt", "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        return "[Column definitions file not found.]"
+
+column_reference = load_column_definitions()
 
 # Token counting utility
 def count_tokens(messages, model="gpt-3.5-turbo"):
@@ -40,8 +53,23 @@ def is_bad_query(user_input: str) -> bool:
     return any(term in text for term in blocklist)
 
 # System prompt for healthcare assistant
-SYSTEM_PROMPT = """
+SYSTEM_PROMPT = f"""
 You are a healthcare analytics assistant. You help users interpret and analyze healthcare-related data from CSV files.
+
+Here are the column definitions for reference:
+Column definitions- 
+Patient ID - Unique ID associated with each patient
+Age - Age of the individual, ranging from 20 to 85
+Gender - (Here)M/F
+BMI - BMI is a tool that estimates the amount of body fat by using height and weight measurements. It can help assess health risks, but it has some limitations and does not diagnose conditions. Calculated using BMI = (Weight)/(Height in meters)^2
+Smoker: Indicates if the patient is a smoker (Yes/No)
+BMI: Body Mass Index of the patient
+Diabetes: Indicates if the patient has diabetes (Yes/No)
+Exercise Frequency (Days/week) - Number of days  a patient exercises in a week (out of 7) - ranges from 0 to 7
+Cholesterol level - Cholesterol levels show how much cholesterol is circulating in your blood.(LDL + HDL) 100 to 200 (usual range for metric)
+Hospital visit data (for last year) - Number of hospital visits by the patient in the last year 
+Readmissions within 30 days - If the patient was readmitted to the hospital within 30 days of being discharged
+
 
 You can assist with:
 - Public and community health
@@ -57,7 +85,7 @@ Avoid answering questions unrelated to healthcare (e.g., programming, politics, 
 """
 
 # Streamlit UI
-st.title("Pseudo gpt")
+st.title("Healthcare Assistant with Predictive ML")
 
 uploaded_file = st.file_uploader("Upload healthcare data (CSV)", type="csv")
 df = None
@@ -67,24 +95,6 @@ if uploaded_file:
     df = pd.read_csv(uploaded_file)
     csv_uploaded = True
     st.success("CSV file loaded successfully.")
-
-    # Prediction section (auto-triggered)
-    try:
-        df_encoded = pd.get_dummies(df, columns=["gender", "smoker"], drop_first=True)
-
-        missing_cols = [col for col in model.feature_names_in_ if col not in df_encoded.columns]
-        for col in missing_cols:
-            df_encoded[col] = 0
-        df_encoded = df_encoded[model.feature_names_in_]
-
-        preds = model.predict(df_encoded)
-        df["Predicted Readmission"] = preds
-
-        st.subheader("Model Predictions")
-        st.dataframe(df[["patient_id", "Predicted Readmission"]])
-
-    except Exception as e:
-        st.error(f"Prediction failed: {e}")
 
 # Initialize chat state
 if "messages" not in st.session_state:
