@@ -9,7 +9,7 @@ from sklearn.metrics import classification_report, accuracy_score
 from xgboost import XGBClassifier
 
 # === Load Data ===
-df = pd.read_csv(r"C:\Users\Lenovo\Desktop\streamlit projects\dummy_healthcare_data.csv")  
+df = pd.read_csv(r"dummy_healthcare_data.csv")  
 
 # === Preprocessing ===
 possible_targets = [col for col in df.columns if "readmit" in col.lower()]
