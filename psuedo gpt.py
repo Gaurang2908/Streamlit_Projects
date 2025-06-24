@@ -50,7 +50,21 @@ def is_bad_query(user_input: str) -> bool:
     ]
     return any(term in text for term in blocklist)
 
-# System prompt for healthcare assistant
+# Simple keyword-based handler for data-aware questions
+def try_data_response(prompt: str, df: pd.DataFrame) -> str | None:
+    p_lower = prompt.lower()
+    if "how many" in p_lower and "diabetes" in p_lower:
+        if "Diabetes" in df.columns:
+            return f"There are {df[df['Diabetes'].str.lower() == 'yes'].shape[0]} patients with diabetes in the dataset."
+    elif "average age" in p_lower:
+        if "Age" in df.columns:
+            return f"The average age of patients is {df['Age'].mean():.2f} years."
+    elif "average bmi" in p_lower:
+        if "BMI" in df.columns:
+            return f"The average BMI is {df['BMI'].mean():.2f}."
+    return None
+
+# System prompt
 SYSTEM_PROMPT = f"""
 You are a healthcare analytics assistant. You help users interpret and analyze healthcare-related data from CSV files.
 
@@ -67,7 +81,6 @@ Exercise Frequency (Days/week) - Number of days  a patient exercises in a week (
 Cholesterol level - Cholesterol levels show how much cholesterol is circulating in your blood.(LDL + HDL) 100 to 200 (usual range for metric)
 Hospital visit data (for last year) - Number of hospital visits by the patient in the last year 
 Readmissions within 30 days - If the patient was readmitted to the hospital within 30 days of being discharged
-
 
 You can assist with:
 - Public and community health
@@ -114,32 +127,37 @@ if prompt := st.chat_input("Ask your healthcare-related question..."):
         elif not csv_uploaded:
             response = "Please upload a healthcare CSV file first."
         else:
-            context = [{"role": "system", "content": SYSTEM_PROMPT}]
-            context += st.session_state.messages[-10:]
-
-            tokens_used = count_tokens(context)
-            if tokens_used > TPM_LIMIT:
-                time.sleep(60)
-
-            max_retries = 3
-            wait = 10
-            for attempt in range(max_retries):
-                try:
-                    completion = client.chat.completions.create(
-                        model=MODEL,
-                        messages=context,
-                        stream=False,
-                    )
-                    response = completion.choices[0].message.content
-                    break
-                except RateLimitError:
-                    time.sleep(wait)
-                    wait *= 2
-                except APIError as e:
-                    response = f"OpenAI API error: {e}"
-                    break
+            # Try to answer with Pandas if possible
+            data_response = try_data_response(prompt, df)
+            if data_response:
+                response = data_response
             else:
-                response = "Rate limit error. Try again later."
+                context = [{"role": "system", "content": SYSTEM_PROMPT}]
+                context += st.session_state.messages[-10:]
+
+                tokens_used = count_tokens(context)
+                if tokens_used > TPM_LIMIT:
+                    time.sleep(60)
+
+                max_retries = 3
+                wait = 10
+                for attempt in range(max_retries):
+                    try:
+                        completion = client.chat.completions.create(
+                            model=MODEL,
+                            messages=context,
+                            stream=False,
+                        )
+                        response = completion.choices[0].message.content
+                        break
+                    except RateLimitError:
+                        time.sleep(wait)
+                        wait *= 2
+                    except APIError as e:
+                        response = f"OpenAI API error: {e}"
+                        break
+                else:
+                    response = "Rate limit error. Try again later."
 
         st.markdown(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
