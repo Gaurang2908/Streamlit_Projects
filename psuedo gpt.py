@@ -57,7 +57,7 @@ Avoid answering questions unrelated to healthcare (e.g., programming, politics, 
 """
 
 # Streamlit UI
-st.title("Healthcare Assistant with Predictive ML")
+st.title("Pseudo GPT")
 
 uploaded_file = st.file_uploader("Upload healthcare data (CSV)", type="csv")
 df = None
