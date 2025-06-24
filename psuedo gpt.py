@@ -1,61 +1,25 @@
 import streamlit as st
-from openai import OpenAI, RateLimitError, APIError
 import pandas as pd
+import joblib
 import time
 import tiktoken
+from openai import OpenAI, RateLimitError, APIError
 
 # Constants
 MODEL = "gpt-3.5-turbo"
 TPM_LIMIT = 90000
 
-# OpenAI client
+# Load OpenAI client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# Define assistant scope
+# Load trained ML model
+@st.cache_resource
+def load_model():
+    return joblib.load("readmission_model.pkl")
 
-#restricted scope
-#ONLY respond to questions about:
-#- Employee wellness
-#- Corporate health data
-#- Insights from health-related dashboards
-#- Absenteeism, presenteeism, productivity
-#- Workplace mental and physical health trends
+model = load_model()
 
-SYSTEM_PROMPT = """
-You are a healthcare analytics assistant for corporate HRs and business leaders. You help users interpret and analyze healthcare-related data from CSV files.
-
-You can assist with:
-- General wellness, helath and healthcare
-- Public and community health
-- Clinical outcomes
-- Utilisation, claims, or EMR data
-- Digital health trends and metrics
-- Wellness, chronic conditions, mental health
-- Epidemiological or demographic health trends
-- Patient engagement and health program effectiveness
-
-DO NOT answer questions unrelated to workplace wellness (e.g., code, philosophy, politics, general trivia). 
-If asked such questions, politely say: "I'm designed to assist only with corporate health & wellness insights."
-
-If greeted or thanked, respond politely.
-
-Always use the uploaded CSV data to answer questions. If information is missing, say so. Do not hallucinate.
-"""
-
-# Smart query filter
-def is_bad_query(user_input: str) -> bool:
-    text = user_input.lower().strip()
-
-    # Only block clearly irrelevant or unsafe queries
-    blocklist = [
-        "code", "python", "javascript", "html", "css", "capital of", "president",
-        "celebrity", "movie", "joke", "riddle", "hack", "kill", "religion", "nude",
-        "love", "game", "anime", "song", "music"
-    ]
-
-    return any(term in text for term in blocklist)
-    
-# Token counter
+# Token counting utility
 def count_tokens(messages, model="gpt-3.5-turbo"):
     encoding = tiktoken.encoding_for_model(model)
     num_tokens = 0
@@ -66,96 +30,108 @@ def count_tokens(messages, model="gpt-3.5-turbo"):
     num_tokens += 2
     return num_tokens
 
-# UI
-st.title("PseudoGPT")
+# Scope filter
+def is_bad_query(user_input: str) -> bool:
+    text = user_input.lower().strip()
+    blocklist = [
+        "code", "python", "html", "celebrity", "movie", "joke", "riddle",
+        "hack", "religion", "nude", "anime", "music"
+    ]
+    return any(term in text for term in blocklist)
 
-uploaded_file = st.file_uploader("Upload your corporate wellness data (CSV)", type="csv")
+# System prompt for healthcare assistant
+SYSTEM_PROMPT = """
+You are a healthcare analytics assistant. You help users interpret and analyze healthcare-related data from CSV files.
 
-df = None
-data_context = ""
-if uploaded_file is not None:
-    try:
-        df = pd.read_csv(uploaded_file)
-        df_description = df.describe(include='all').to_string()
-        df_columns = ", ".join(df.columns)
-        data_context = f"""
-This is the dataset you must use to answer all queries.
+You can assist with:
+- Public and community health
+- Clinical outcomes
+- Utilization, claims, or EMR data
+- Digital health trends and metrics
+- Wellness, chronic conditions, mental health
+- Epidemiological or demographic health trends
+- Patient engagement and health program effectiveness
 
-Available columns: {df_columns}
-
-Dataset Summary:
-{df_description}
+Always use the uploaded CSV to support your responses. If the data is insufficient or irrelevant, say so — don’t guess.
+Avoid answering questions unrelated to healthcare (e.g., programming, politics, jokes, general trivia).
 """
-    except Exception as e:
-        st.error(f"❌ Failed to read the CSV file: {e}")
-        data_context = "⚠️ CSV could not be read. No context available."
 
-# Initialize session
+# Streamlit UI
+st.title("Healthcare Assistant with Predictive ML")
+
+uploaded_file = st.file_uploader("Upload healthcare data (CSV)", type="csv")
+df = None
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.success("CSV file loaded successfully.")
+
+    # Prediction section
+    try:
+        df_encoded = pd.get_dummies(df, columns=["gender", "smoker"], drop_first=True)
+
+        # Match training columns
+        missing_cols = [col for col in model.feature_names_in_ if col not in df_encoded.columns]
+        for col in missing_cols:
+            df_encoded[col] = 0
+        df_encoded = df_encoded[model.feature_names_in_]
+
+        preds = model.predict(df_encoded)
+        df["Predicted Readmission"] = preds
+
+        st.subheader("Model Predictions")
+        st.dataframe(df[["patient_id", "Predicted Readmission"]])
+
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+
+# Initialize chat state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display past messages
+# Show chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# User input
-if prompt := st.chat_input("Ask me anything..."):
+# Chat input
+if prompt := st.chat_input("Ask your healthcare-related question..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user", avatar="🙇‍♂️"):
+    with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Process assistant reply logic
-    if is_bad_query(prompt):
-        response = "I'm designed to assist only with corporate health & wellness insights. Please rephrase your question."
-    elif df is None:
-        response = "Please upload a valid CSV file to get insights."
-    else:
-        # GPT logic
-        context = [{"role": "system", "content": SYSTEM_PROMPT}]
-        if df is not None:
-            context.append({
-                "role": "assistant",
-                "content": f"{data_context}\n\n(Note: This is the dataset context you must consider before responding.)"
-            })
-        
-        context += st.session_state.messages[-10:]
+    with st.chat_message("assistant"):
+        if is_bad_query(prompt):
+            response = "I'm designed to assist only with healthcare insights. Please rephrase."
+        elif df is None:
+            response = "Please upload a healthcare CSV file first."
+        else:
+            context = [{"role": "system", "content": SYSTEM_PROMPT}]
+            context += st.session_state.messages[-10:]
 
-        tokens_used = count_tokens(context)
+            tokens_used = count_tokens(context)
+            if tokens_used > TPM_LIMIT:
+                time.sleep(60)
 
-        if tokens_used > TPM_LIMIT:
-            st.warning(f"⚠️ Token usage ({tokens_used}) exceeds limit ({TPM_LIMIT}). Waiting 60s.")
-            time.sleep(60)
+            max_retries = 3
+            wait = 10
+            for attempt in range(max_retries):
+                try:
+                    completion = client.chat.completions.create(
+                        model=MODEL,
+                        messages=context,
+                        stream=False,
+                    )
+                    response = completion.choices[0].message.content
+                    break
+                except RateLimitError:
+                    time.sleep(wait)
+                    wait *= 2
+                except APIError as e:
+                    response = f"OpenAI API error: {e}"
+                    break
+            else:
+                response = "Rate limit error. Try again later."
 
-        max_retries = 3
-        wait = 10
-        success = False
-
-        for attempt in range(max_retries):
-            try:
-                completion = client.chat.completions.create(
-                    model=MODEL,
-                    messages=context,
-                    stream=False,
-                )
-                response = completion.choices[0].message.content
-                success = True
-                break
-            except RateLimitError:
-                st.warning(f"⏳ Rate limit hit. Retrying in {wait} sec... (Attempt {attempt+1}/{max_retries})")
-                time.sleep(wait)
-                wait *= 2
-            except APIError as e:
-                st.error(f"💥 OpenAI API error: {e}")
-                response = "[API Error]"
-                break
-
-        if not success:
-            response = "⚠️ Failed after multiple retries due to rate limits. Please try again later."
-
-    # AFTER GPT call finishes...
-    with st.chat_message("assistant", avatar="👾"):
         st.markdown(response)
-
     st.session_state.messages.append({"role": "assistant", "content": response})
-
