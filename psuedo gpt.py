@@ -57,20 +57,21 @@ Avoid answering questions unrelated to healthcare (e.g., programming, politics, 
 """
 
 # Streamlit UI
-st.title("Pseudo GPT")
+st.title("Pseudo gpt")
 
 uploaded_file = st.file_uploader("Upload healthcare data (CSV)", type="csv")
 df = None
+csv_uploaded = False
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
+    csv_uploaded = True
     st.success("CSV file loaded successfully.")
 
-    # Prediction section
+    # Prediction section (auto-triggered)
     try:
         df_encoded = pd.get_dummies(df, columns=["gender", "smoker"], drop_first=True)
 
-        # Match training columns
         missing_cols = [col for col in model.feature_names_in_ if col not in df_encoded.columns]
         for col in missing_cols:
             df_encoded[col] = 0
@@ -103,7 +104,7 @@ if prompt := st.chat_input("Ask your healthcare-related question..."):
     with st.chat_message("assistant"):
         if is_bad_query(prompt):
             response = "I'm designed to assist only with healthcare insights. Please rephrase."
-        elif df is None:
+        elif not csv_uploaded:
             response = "Please upload a healthcare CSV file first."
         else:
             context = [{"role": "system", "content": SYSTEM_PROMPT}]
