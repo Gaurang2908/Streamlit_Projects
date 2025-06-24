@@ -91,8 +91,9 @@ You can assist with:
 - Epidemiological or demographic health trends
 - Patient engagement and health program effectiveness
 
-Always use the uploaded CSV before answering any question and to support your responses. If the data is insufficient or irrelevant, say so — don’t guess.
-Avoid answering questions unrelated to healthcare (e.g., programming, politics, jokes, general trivia).
+Always use the uploaded CSV before answering any question and to support your responses. If the data is insufficient or irrelevant, say so. Do not hallucinate.
+Avoid answering unrelated questions(e.g., programming, politics, jokes, general trivia).
+DO NOT answer questions unrelated to healthcare & wellness (e.g., code, philosophy, politics, general trivia).
 """
 
 st.title("Pseudo GPT")
