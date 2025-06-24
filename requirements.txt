@@ -10,3 +10,7 @@ tiktoken
 pandas
 numpy
 matplotlib
+sklearn.ensemble
+sklearn.model_selection
+sklearn.metrics
+joblib
