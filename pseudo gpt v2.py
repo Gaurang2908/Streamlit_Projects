@@ -110,11 +110,29 @@ if prompt:
                 ]
             )
             response_text = completion.choices[0].message.content.strip()
+            if not response_text.startswith("{") or not response_text.endswith("}"):
+                response = (
+                    "This assistant only answers structured data queries on the uploaded dataset.\n"
+                    "Try something like:\n"
+                    "- patients over 40 who smoke\n"
+                    "- plot a pie chart of diabetes\n"
+                    "- show hospital visits trend by age group"
+                )
+                with st.chat_message("assistant"):
+                    st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                st.stop()
+            
+            # Safe parsing
             try:
                 query = ast.literal_eval(response_text)
-            except:
-                st.error("LLM response was not a valid dictionary.")
+            except Exception as e:
+                response = f"LLM returned an invalid dictionary. Error: {e}"
+                with st.chat_message("assistant"):
+                    st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
                 st.stop()
+
 
             def quote_columns(expr, cols):
                 for col in cols:
