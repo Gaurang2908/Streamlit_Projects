@@ -30,6 +30,12 @@ def get_closest_column(colname, columns):
     matches = difflib.get_close_matches(colname, columns, n=1, cutoff=0.6)
     return matches[0] if matches else None
 
+# Helper: Quote columns in filters
+def quote_columns(expr, cols):
+    for col in cols:
+        expr = re.sub(rf'\b{re.escape(col)}\b', f'`{col}`', expr)
+    return expr
+
 # App UI
 st.set_page_config(page_title="Pseudo GPT v2", layout="wide")
 st.title("Pseudo GPT v2 - Healthcare Data Assistant")
@@ -102,14 +108,12 @@ if prompt:
                     {"role": "user", "content": query_instruction}
                 ]
             )
-            
+
+            response_text = completion.choices[0].message.content.strip()
+            query = ast.literal_eval(response_text)
+
             result = df.copy()
             for f in query.get("filters", []):
-                safe_filter = quote_columns(f, df.columns)
-                try:
-                    result = result.query(safe_filter)
-                except Exception as e:
-                    st.warning(f"Filter failed: `{safe_filter}` — {e}")
                 if any(op in f for op in ["==", "!=", ">", "<", ">=", "<="]):
                     safe_filter = quote_columns(f, df.columns)
                     try:
@@ -121,6 +125,11 @@ if prompt:
 
             if query["action"] == "plot":
                 col = query.get("target_column")
+                plot_type = query.get("plot_type", "bar")
+                col = get_closest_column(col, df.columns) or col
+
+                if col not in result.columns:
+                    response = f"'{col}' not found in dataset."
                 elif result[col].dropna().empty:
                     response = f"No data to plot in '{col}'."
                 else:
@@ -128,16 +137,33 @@ if prompt:
                     counts = result[col].value_counts().sort_index()
 
                     if plot_type == "bar":
+                        counts.plot(kind="bar", ax=ax)
+                    elif plot_type == "pie":
+                        counts.plot(kind="pie", autopct="%1.1f%%", ax=ax)
+                        ax.axis("equal")
+                    elif plot_type == "line":
+                        counts.plot(kind="line", marker="o", ax=ax)
+                    elif plot_type == "hist":
+                        result[col].dropna().plot(kind="hist", bins=10, ax=ax)
+                    elif plot_type == "scatter":
+                        if len(result.columns) >= 2:
+                            x_col = result.columns[0]
+                            result.plot(kind="scatter", x=x_col, y=col, ax=ax)
+                        else:
+                            st.warning("Need at least 2 numeric columns for scatter plot.")
+                    elif plot_type == "area":
                         counts.plot(kind="area", stacked=False, ax=ax)
 
                     ax.set_title(f"{plot_type.title()} chart for {col}")
-                    st.pyplot(fig)
                     st.pyplot(fig, use_container_width=True)
                     response = f"Plotted a {plot_type} chart for {col}."
 
             elif query["action"] == "filter":
                 response = f"Filtered {len(result)} rows based on your query."
                 st.dataframe(result)
+
+            elif query["action"] == "answer":
+                response = query.get("answer", "I don't know.")
 
             with st.chat_message("assistant"):
                 st.markdown(response)
