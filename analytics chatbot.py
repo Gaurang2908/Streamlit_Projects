@@ -5,6 +5,7 @@ import openai
 import ast
 import io
 import re
+import difflib
 
 # OpenAI settings
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -14,7 +15,7 @@ MODEL = "gpt-3.5-turbo"
 COLUMN_DEFINITIONS = {
     "Patient ID": "Unique identifier for each patient",
     "Age": "Patient's age in years",
-    "Gender": "Patient's gender (M/F) or (male/female)",
+    "Gender": "Patient's gender (M/F)",
     "Smoker": "Yes/No field indicating if the patient is a smoker",
     "Diabetes": "Yes/No field indicating if the patient has diabetes",
     "BMI": "Body Mass Index calculated as weight(kg)/height(m)^2",
@@ -23,6 +24,11 @@ COLUMN_DEFINITIONS = {
     "Hospital visit data (for last year)": "Number of hospital visits in the past year",
     "Readmissions within 30 days": "Yes/No for whether patient was readmitted within 30 days"
 }
+
+# Helper: Match fuzzy columns
+def get_closest_column(colname, columns):
+    matches = difflib.get_close_matches(colname, columns, n=1, cutoff=0.6)
+    return matches[0] if matches else None
 
 # App UI
 st.title("Analytics Healthcare Assistant")
@@ -50,31 +56,34 @@ if uploaded_file is not None:
         column_docs = "\n".join([f"- {col}: {desc}" for col, desc in COLUMN_DEFINITIONS.items() if col in df.columns])
 
         query_instruction = f"""
-        You are a data assistant working with a healthcare dataset.
-
-        Columns in the dataset:
+        You are a healthcare analytics assistant. You work with tabular CSV data uploaded by the user.
+        You must always refer only to these columns:
         {columns_str}
 
-        Column descriptions:
+        Descriptions:
         {column_docs}
 
-        Convert the following natural language instruction into a Python dictionary with:
-        - 'action': either 'filter' or 'plot'
-        - 'filters': a list of filters as pandas conditions (e.g., "Age > 50", "Smoker == 'Yes'")
-        - 'plot_type': if action is 'plot', choose from ['bar', 'line', 'pie']
-        - 'target_column': column to visualize
+        Examples:
+        - "patients over 40 who smoke" → filters: ["Age > 40", "Smoker == 'Yes'"]
+        - "pie chart of diabetes" → action: plot, plot_type: pie, target_column: 'Diabetes'
 
-        If no filters are needed, return an empty list for filters.
+        Required Output:
+        {{
+            "action": "filter" or "plot",
+            "filters": [...],
+            "plot_type": "bar"|"pie"|"line",
+            "target_column": "ColumnName"
+        }}
 
-        User input: {prompt}
-        Return only the dictionary and nothing else.
+        Only return a valid Python dictionary and nothing else.
+        Instruction: {prompt}
         """
 
         try:
             completion = client.chat.completions.create(
                 model=MODEL,
                 messages=[
-                    {"role": "system", "content": "You're a Python dictionary formatter."},
+                    {"role": "system", "content": "You're a precise Python dictionary generator."},
                     {"role": "user", "content": query_instruction}
                 ]
             )
@@ -85,10 +94,9 @@ if uploaded_file is not None:
                 st.error("LLM returned invalid dictionary. Please try rephrasing.")
                 st.stop()
 
-            # Sanitize column names in filters
             def quote_column_names(filter_str, df_columns):
                 for col in df_columns:
-                    pattern = r'\\b{}\\b'.format(re.escape(col))
+                    pattern = r'\b{}\b'.format(re.escape(col))
                     filter_str = re.sub(pattern, f"`{col}`", filter_str)
                 return filter_str
 
@@ -116,6 +124,10 @@ if uploaded_file is not None:
 
                 col = query.get("target_column")
                 plot_type = query.get("plot_type", "bar")
+
+                closest = get_closest_column(col, df.columns)
+                if closest and closest != col:
+                    col = closest
 
                 if col not in result.columns:
                     st.warning("Column not found in dataset.")
