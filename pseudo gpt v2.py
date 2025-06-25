@@ -1,5 +1,3 @@
-# Pseudo GPT v2 - Hybrid Healthcare Analytics Assistant
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -106,7 +104,8 @@ if prompt:
             )
             response_text = completion.choices[0].message.content.strip()
 
-            if not response_text.startswith("{") or not response_text.endswith("}"):
+            if "{" not in response_text or "}" not in response_text:
+                raise ValueError("LLM response doesn't look like a dictionary.")
                 response = "Sorry, I can only respond to data-related queries or direct healthcare concepts."
                 with st.chat_message("assistant"):
                     st.markdown(response)
@@ -183,10 +182,11 @@ if prompt:
             elif query["action"] == "filter":
                 response = f"Filtered {len(result)} rows based on your query."
                 st.dataframe(result)
-
-            with st.chat_message("assistant"):
-                st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+                with st.chat_message("assistant"):
+                    st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                if not result.empty and st.checkbox("Show filtered results"):
+                    st.dataframe(result)
 
         except Exception as e:
             response = f"Error: {e}"
