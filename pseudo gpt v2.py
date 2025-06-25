@@ -127,7 +127,6 @@ if prompt:
                 elif result[col].dropna().empty:
                     response = f"No data to plot in '{col}'."
                 else:
-                    fig, ax = plt.subplots(figsize=(5, 4))
                     fig, ax = plt.subplots(figsize=(4, 3))
                     counts = result[col].value_counts().sort_index()
 
