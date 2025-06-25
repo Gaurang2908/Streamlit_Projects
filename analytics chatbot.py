@@ -39,7 +39,8 @@ if uploaded_file is not None:
         """
 
         try:
-            completion = openai.ChatCompletion.create(
+            client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+            completion = client.chat.completions.create(
                 model=MODEL,
                 messages=[
                     {"role": "system", "content": "You're a Python dictionary formatter."},
