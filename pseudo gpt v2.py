@@ -98,13 +98,11 @@ if prompt:
             completion = client.chat.completions.create(
                 model=MODEL,
                 messages=[
-                    {"role": "system", "content": "You're a Python dictionary generator for data queries."},
                     {"role": "system", "content": "You're a Python dictionary generator for data queries. Always respond with a Python dictionary."},
                     {"role": "user", "content": query_instruction}
                 ]
             )
-@@ -136,11 +136,14 @@
-
+            
             result = df.copy()
             for f in query.get("filters", []):
                 safe_filter = quote_columns(f, df.columns)
