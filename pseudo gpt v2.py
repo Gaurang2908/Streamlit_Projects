@@ -1,3 +1,5 @@
+# Pseudo GPT v2 - Hybrid Healthcare Analytics Assistant
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,18 +13,18 @@ import difflib
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 MODEL = "gpt-3.5-turbo"
 
-# Scope-defined Column Definitions (from analytics assistant)
+# Column Definitions (from Pseudo GPT)
 COLUMN_DEFINITIONS = {
-    "Patient ID": "Unique ID associated with each patient",
-    "Age": "Age of the individual, ranging from 20 to 85",
-    "Gender": "(Here)M/F",
-    "BMI": "BMI is a tool that estimates the amount of body fat by using height and weight measurements. It can help assess health risks, but it has some limitations and does not diagnose conditions. Calculated using BMI = (Weight)/(Height in meters)^2",
-    "Smoker": "Indicates if the patient is a smoker (Yes/No)",
-    "Diabetes": "Indicates if the patient has diabetes (Yes/No)",
-    "Exercise Frequency (Days/week)": "Number of days a patient exercises in a week (out of 7) - ranges from 0 to 7",
-    "Cholesterol level": "Cholesterol levels show how much cholesterol is circulating in your blood.(LDL + HDL) 100 to 200 (usual range for metric)",
-    "Hospital visit data (for last year)": "Number of hospital visits by the patient in the last year",
-    "Readmissions within 30 days": "If the patient was readmitted to the hospital within 30 days of being discharged"
+    "Patient ID": "Unique identifier for each patient",
+    "Age": "Patient's age in years",
+    "Gender": "Patient's gender (M/F)",
+    "Smoker": "Yes/No field indicating if the patient is a smoker",
+    "Diabetes": "Yes/No field indicating if the patient has diabetes",
+    "BMI": "Body Mass Index calculated as weight(kg)/height(m)^2",
+    "Exercise Frequency (Days/week)": "How many days per week the patient exercises (0-7)",
+    "Cholesterol level": "Total cholesterol level (HDL + LDL)",
+    "Hospital visit data (for last year)": "Number of hospital visits in the past year",
+    "Readmissions within 30 days": "Yes/No for whether patient was readmitted within 30 days"
 }
 
 # Helper: Match fuzzy columns
@@ -68,33 +70,26 @@ if prompt:
         columns_str = ", ".join([f"'{col}'" for col in df.columns])
 
         query_instruction = f"""
-        You are a healthcare analytics assistant. You help users interpret and analyze healthcare-related data from CSV files.
+        You are a helpful and accurate healthcare analytics assistant.
+        You analyze uploaded CSV data using only the following columns:
+        {columns_str}
 
-        Here are the column definitions for reference:
+        Column meanings:
         {column_docs}
-
-        You can assist with:
-        - Public and community health
-        - Clinical outcomes
-        - Utilization, claims, or EMR data
-        - Digital health trends and metrics
-        - Wellness, chronic conditions, mental health
-        - Epidemiological or demographic health trends
-        - Patient engagement and health program effectiveness
-
-        Always use the uploaded CSV before answering any question and to support your responses. If the data is insufficient or irrelevant, say so — don’t guess.
-        Avoid answering questions unrelated to healthcare (e.g., programming, politics, jokes, general trivia).
 
         For queries like:
         - "patients over 40 who smoke" → filters: ["Age > 40", "Smoker == 'Yes'"]
         - "bar chart for diabetes vs smoker count" → action: plot, plot_type: bar, target_column: 'Diabetes'
 
+        If the query is general like "what is healthcare", answer directly in plain English.
+
         Output format:
         {{
-            "action": "filter" or "plot",
+            "action": "filter" or "plot" or "answer",
             "filters": [...],
             "plot_type": "bar" | "pie" | "line" | "scatter" | "hist" | "area",
-            "target_column": "ColumnName"
+            "target_column": "ColumnName",
+            "answer": "Only if action is 'answer'"
         }}
 
         Your response must be a valid Python dictionary. Do not include explanations.
@@ -110,20 +105,14 @@ if prompt:
                 ]
             )
             response_text = completion.choices[0].message.content.strip()
+
             if not response_text.startswith("{") or not response_text.endswith("}"):
-                response = (
-                    "This assistant only answers structured data queries on the uploaded dataset.\n"
-                    "Try something like:\n"
-                    "- patients over 40 who smoke\n"
-                    "- plot a pie chart of diabetes\n"
-                    "- show hospital visits trend by age group"
-                )
+                response = "Sorry, I can only respond to data-related queries or direct healthcare concepts."
                 with st.chat_message("assistant"):
                     st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 st.stop()
-            
-            # Safe parsing
+
             try:
                 query = ast.literal_eval(response_text)
             except Exception as e:
@@ -133,11 +122,17 @@ if prompt:
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 st.stop()
 
-
             def quote_columns(expr, cols):
                 for col in cols:
                     expr = re.sub(rf'\b{re.escape(col)}\b', f'`{col}`', expr)
                 return expr
+
+            if query.get("action") == "answer":
+                response = query.get("answer", "I don't know.")
+                with st.chat_message("assistant"):
+                    st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                st.stop()
 
             result = df.copy()
             for f in query.get("filters", []):
@@ -147,12 +142,7 @@ if prompt:
                 except Exception as e:
                     st.warning(f"Filter failed: `{safe_filter}` — {e}")
 
-            output_buffer = io.StringIO()
-            if query["action"] == "filter":
-                response = f"Filtered {len(result)} rows based on your query."
-                st.dataframe(result)
-
-            elif query["action"] == "plot":
+            if query["action"] == "plot":
                 col = query.get("target_column")
                 plot_type = query.get("plot_type", "bar")
                 col = get_closest_column(col, df.columns) or col
@@ -162,7 +152,7 @@ if prompt:
                 elif result[col].dropna().empty:
                     response = f"No data to plot in '{col}'."
                 else:
-                    fig, ax = plt.subplots()
+                    fig, ax = plt.subplots(figsize=(5, 4))
                     counts = result[col].value_counts().sort_index()
 
                     if plot_type == "bar":
@@ -186,6 +176,9 @@ if prompt:
                     ax.set_title(f"{plot_type.title()} chart for {col}")
                     st.pyplot(fig)
                     response = f"Plotted a {plot_type} chart for {col}."
+
+            elif query["action"] == "filter":
+                response = f"Filtered {len(result)} rows based on your query."
 
             with st.chat_message("assistant"):
                 st.markdown(response)
