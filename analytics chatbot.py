@@ -6,11 +6,11 @@ import ast
 import io
 
 # OpenAI settings
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 MODEL = "gpt-3.5-turbo"
 
 # App UI
-st.title("Analytics Heatlhcare Assistant")
+st.title("Analytics Healthcare Assistant")
 
 uploaded_file = st.file_uploader("Upload your healthcare dataset (CSV)", type=["csv"])
 df = None
@@ -20,9 +20,14 @@ if uploaded_file is not None:
     st.subheader("Data Preview")
     st.dataframe(df.head())
 
+    # Initialize chat history
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
     # LLM interaction
     prompt = st.chat_input("Write something...")
     if prompt:
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
         st.chat_message("user").markdown(prompt)
 
         query_instruction = f"""
@@ -39,7 +44,6 @@ if uploaded_file is not None:
         """
 
         try:
-            client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
             completion = client.chat.completions.create(
                 model=MODEL,
                 messages=[
@@ -48,9 +52,10 @@ if uploaded_file is not None:
                 ]
             )
             parsed_text = completion.choices[0].message.content.strip()
-            st.chat_message("assistant").markdown(f"```json\n{parsed_text}\n```")
-
             query = ast.literal_eval(parsed_text)
+
+            st.session_state.chat_history.append({"role": "assistant", "content": str(query)})
+            st.chat_message("assistant").markdown(f"### Parsed Query\n```json\n{query}\n```")
 
             # Filter logic
             if query['action'] == 'filter':
@@ -94,3 +99,9 @@ if uploaded_file is not None:
 
         except Exception as e:
             st.error(f"Could not process the request: {e}")
+
+# Show chat history
+if "chat_history" in st.session_state:
+    with st.expander("Chat History"):
+        for msg in st.session_state.chat_history:
+            st.markdown(f"**{msg['role'].capitalize()}:** {msg['content']}")
