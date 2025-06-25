@@ -22,7 +22,7 @@ COLUMN_DEFINITIONS = {
     "Exercise Frequency (Days/week)": "How many days per week the patient exercises (0-7)",
     "Cholesterol level": "Total cholesterol level (HDL + LDL)",
     "Hospital visit data (for last year)": "Number of hospital visits in the past year",
-    "Readmissions within 30 days": "Yes/No for whether patient was readmitted within 30 days"
+    "Readmissions within 30 days": "Yes/No for whether the patient was readmitted within 30 days"
 }
 
 # Helper: Match fuzzy columns
@@ -104,8 +104,7 @@ if prompt:
             )
             response_text = completion.choices[0].message.content.strip()
 
-            if "{" not in response_text or "}" not in response_text:
-                raise ValueError("LLM response doesn't look like a dictionary.")
+            if not response_text.startswith("{") or not response_text.endswith("}"):
                 response = "Sorry, I can only respond to data-related queries or direct healthcare concepts."
                 with st.chat_message("assistant"):
                     st.markdown(response)
@@ -182,11 +181,10 @@ if prompt:
             elif query["action"] == "filter":
                 response = f"Filtered {len(result)} rows based on your query."
                 st.dataframe(result)
-                with st.chat_message("assistant"):
-                    st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                if not result.empty and st.checkbox("Show filtered results"):
-                    st.dataframe(result)
+
+            with st.chat_message("assistant"):
+                st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
         except Exception as e:
             response = f"Error: {e}"
