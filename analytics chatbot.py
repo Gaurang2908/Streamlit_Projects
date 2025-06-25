@@ -1,5 +1,3 @@
-# Pseudo GPT - Healthcare Analytics Assistant (Patched)
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,6 +9,20 @@ import re
 # OpenAI settings
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 MODEL = "gpt-3.5-turbo"
+
+# Column Definitions
+COLUMN_DEFINITIONS = {
+    "Patient ID": "Unique identifier for each patient",
+    "Age": "Patient's age in years",
+    "Gender": "Patient's gender (M/F) or (male/female)",
+    "Smoker": "Yes/No field indicating if the patient is a smoker",
+    "Diabetes": "Yes/No field indicating if the patient has diabetes",
+    "BMI": "Body Mass Index calculated as weight(kg)/height(m)^2",
+    "Exercise Frequency (Days/week)": "How many days per week the patient exercises (0-7)",
+    "Cholesterol level": "Total cholesterol level (HDL + LDL)",
+    "Hospital visit data (for last year)": "Number of hospital visits in the past year",
+    "Readmissions within 30 days": "Yes/No for whether patient was readmitted within 30 days"
+}
 
 # App UI
 st.title("Analytics Healthcare Assistant")
@@ -33,17 +45,29 @@ if uploaded_file is not None:
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         st.chat_message("user").markdown(prompt)
 
+        # Compose data and definitions for LLM
+        columns_str = ", ".join([f"'{col}'" for col in df.columns])
+        column_docs = "\n".join([f"- {col}: {desc}" for col, desc in COLUMN_DEFINITIONS.items() if col in df.columns])
+
         query_instruction = f"""
-        You are a data assistant. Convert the following natural language question into a Python-readable dictionary with keys:
-        - 'action': one of ['filter', 'plot']
-        - 'filters': a list of pandas filter conditions as strings (if any)
-        - 'plot_type': if action is 'plot', give one of ['bar', 'line', 'pie']
-        - 'target_column': column to plot or count on
+        You are a data assistant working with a healthcare dataset.
 
-        Example output:
-        {{'action': 'filter', 'filters': ["Age > 40", "Smoker == 'Yes'"], 'target_column': 'Smoker'}}
+        Columns in the dataset:
+        {columns_str}
 
-        Now parse: {prompt}
+        Column descriptions:
+        {column_docs}
+
+        Convert the following natural language instruction into a Python dictionary with:
+        - 'action': either 'filter' or 'plot'
+        - 'filters': a list of filters as pandas conditions (e.g., "Age > 50", "Smoker == 'Yes'")
+        - 'plot_type': if action is 'plot', choose from ['bar', 'line', 'pie']
+        - 'target_column': column to visualize
+
+        If no filters are needed, return an empty list for filters.
+
+        User input: {prompt}
+        Return only the dictionary and nothing else.
         """
 
         try:
