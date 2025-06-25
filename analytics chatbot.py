@@ -10,7 +10,7 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 MODEL = "gpt-3.5-turbo"
 
 # App UI
-st.title("Analytics Healthcare Assitant")
+st.title("Analytics Heatlhcare Assistant")
 
 uploaded_file = st.file_uploader("Upload your healthcare dataset (CSV)", type=["csv"])
 df = None
@@ -21,7 +21,7 @@ if uploaded_file is not None:
     st.dataframe(df.head())
 
     # LLM interaction
-    prompt = st.chat_input("Write Something...")
+    prompt = st.chat_input("Write something...")
     if prompt:
         st.chat_message("user").markdown(prompt)
 
