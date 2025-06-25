@@ -100,7 +100,7 @@ if prompt:
             completion = client.chat.completions.create(
                 model=MODEL,
                 messages=[
-                    {"role": "system", "content": "You're a Python dictionary generator for data queries."},
+                    {"role": "system", "content": "You're a Python dictionary generator for data queries. Always respond with a Python dictionary."},
                     {"role": "user", "content": query_instruction}
                 ]
             )
@@ -136,11 +136,14 @@ if prompt:
 
             result = df.copy()
             for f in query.get("filters", []):
-                safe_filter = quote_columns(f, df.columns)
-                try:
-                    result = result.query(safe_filter)
-                except Exception as e:
-                    st.warning(f"Filter failed: `{safe_filter}` — {e}")
+                if any(op in f for op in ["==", "!=", ">", "<", ">=", "<="]):
+                    safe_filter = quote_columns(f, df.columns)
+                    try:
+                        result = result.query(safe_filter)
+                    except Exception as e:
+                        st.warning(f"Filter failed: `{safe_filter}` — {e}")
+                else:
+                    st.warning(f"Ignored invalid filter (likely definition): `{f}`")
 
             if query["action"] == "plot":
                 col = query.get("target_column")
@@ -152,7 +155,7 @@ if prompt:
                 elif result[col].dropna().empty:
                     response = f"No data to plot in '{col}'."
                 else:
-                    fig, ax = plt.subplots(figsize=(5, 4))
+                    fig, ax = plt.subplots(figsize=(4, 3))
                     counts = result[col].value_counts().sort_index()
 
                     if plot_type == "bar":
@@ -174,11 +177,12 @@ if prompt:
                         counts.plot(kind="area", stacked=False, ax=ax)
 
                     ax.set_title(f"{plot_type.title()} chart for {col}")
-                    st.pyplot(fig)
+                    st.pyplot(fig, use_container_width=True)
                     response = f"Plotted a {plot_type} chart for {col}."
 
             elif query["action"] == "filter":
                 response = f"Filtered {len(result)} rows based on your query."
+                st.dataframe(result)
 
             with st.chat_message("assistant"):
                 st.markdown(response)
