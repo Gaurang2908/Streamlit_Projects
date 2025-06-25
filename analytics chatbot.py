@@ -1,114 +1,95 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from openai import OpenAI
+import openai
 import ast
-import re
+import io
 
-# Initialize OpenAI client
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# OpenAI settings
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+MODEL = "gpt-3.5-turbo"
 
-# Session state for chat
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+# App UI
+st.title("Analytics Healthcare Assitant")
 
-# UI Header
-st.title("Pseudo GPT - Healthcare Analytics Assistant")
-
-# Upload CSV file
-uploaded_file = st.file_uploader("Upload your healthcare dataset (CSV)", type="csv")
+uploaded_file = st.file_uploader("Upload your healthcare dataset (CSV)", type=["csv"])
 df = None
-if uploaded_file:
+if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
-    st.write("### Data Preview")
+    st.success("Dataset loaded successfully!")
+    st.subheader("Data Preview")
     st.dataframe(df.head())
 
-# OpenAI prompt helper to parse query into structured logic
-def parse_query_with_llm(prompt, columns):
-    system_prompt = f"""
-    You are a data query assistant.
-    Given a user prompt and list of CSV columns, return a Python dictionary with:
-    - action: one of [filter, groupby, plot]
-    - filters: list of conditions (e.g., Age > 40, Smoker == 'Yes')
-    - plot_type: (optional) one of [bar, line, pie]
-    - group_by: (optional) column name(s) to group by
-    - target_column: (optional) column to aggregate or plot
+    # LLM interaction
+    prompt = st.chat_input("Write Something...")
+    if prompt:
+        st.chat_message("user").markdown(prompt)
 
-    Use ONLY the columns from this list: {columns}
-    Respond ONLY with the Python dictionary.
-    """
+        query_instruction = f"""
+        You are a data assistant. Convert the following natural language question into a Python-readable dictionary with keys:
+        - 'action': one of ['filter', 'plot']
+        - 'filters': a list of pandas filter conditions as strings (if any)
+        - 'plot_type': if action is 'plot', give one of ['bar', 'line', 'pie']
+        - 'target_column': column to plot or count on
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt}
-        ]
-    )
-    content = response.choices[0].message.content.strip()
+        Example output:
+        {{'action': 'filter', 'filters': ["Age > 40", "Smoker == 'Yes'"], 'target_column': 'Smoker'}}
 
-    try:
-        parsed = ast.literal_eval(content)
-        return parsed
-    except Exception as e:
-        return {"error": f"Could not parse response: {e}"}
+        Now parse: {prompt}
+        """
 
-# Main chatbot interface
-prompt = st.chat_input("Ask your query (e.g. patients over 40 who smoke and were readmitted)")
-if prompt and df is not None:
-    st.chat_message("user").markdown(prompt)
-    st.session_state.chat_history.append(("user", prompt))
+        try:
+            completion = openai.ChatCompletion.create(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": "You're a Python dictionary formatter."},
+                    {"role": "user", "content": query_instruction}
+                ]
+            )
+            parsed_text = completion.choices[0].message.content.strip()
+            st.chat_message("assistant").markdown(f"```json\n{parsed_text}\n```")
 
-    with st.chat_message("assistant"):
-        columns = list(df.columns)
-        parsed_query = parse_query_with_llm(prompt, columns)
+            query = ast.literal_eval(parsed_text)
 
-        if "error" in parsed_query:
-            st.error(parsed_query["error"])
-        else:
-            try:
-                filters = parsed_query.get("filters", [])
-                action = parsed_query.get("action")
-                plot_type = parsed_query.get("plot_type")
-                group_by = parsed_query.get("group_by")
-                target_column = parsed_query.get("target_column")
+            # Filter logic
+            if query['action'] == 'filter':
+                result = df.copy()
+                for f in query.get("filters", []):
+                    result = result.query(f)
+                st.markdown(f"### Filtered Result ({len(result)} rows)")
+                st.dataframe(result)
 
-                # Apply filters
-                query_df = df.copy()
-                for cond in filters:
-                    query_df = query_df.query(cond)
+            # Plot logic
+            elif query['action'] == 'plot':
+                result = df.copy()
+                for f in query.get("filters", []):
+                    result = result.query(f)
+                col = query.get("target_column")
+                plot_type = query.get("plot_type", "bar")
 
-                # Action: Filtered table
-                if action == "filter":
-                    st.success(f"Showing {len(query_df)} filtered records")
-                    st.dataframe(query_df)
-
-                # Action: Plot
-                elif action == "plot" and plot_type:
+                if col not in result.columns:
+                    st.warning("Column not found in dataset.")
+                elif result[col].dropna().empty:
+                    st.warning("No valid data to plot.")
+                else:
                     fig, ax = plt.subplots()
-                    if plot_type == "line":
-                        if group_by and target_column:
-                            query_df.groupby(group_by)[target_column].mean().plot(ax=ax)
-                    elif plot_type == "bar":
-                        if group_by and target_column:
-                            query_df.groupby(group_by)[target_column].mean().plot(kind="bar", ax=ax)
-                    elif plot_type == "pie":
-                        if group_by:
-                            query_df[group_by].value_counts().plot.pie(autopct="%1.1f%%", ax=ax)
-                    else:
-                        st.warning("Unsupported plot type or missing fields.")
-                        st.stop()
+                    counts = result[col].dropna().value_counts()
+
+                    if plot_type == 'bar':
+                        counts.plot(kind='bar', ax=ax)
+                        ax.set_ylabel("Count")
+                        ax.set_title(f"Bar chart for {col}")
+                    elif plot_type == 'pie':
+                        counts.plot(kind='pie', autopct='%1.1f%%', ax=ax)
+                        ax.set_ylabel("")
+                        ax.set_title(f"Pie chart for {col}")
+                        ax.axis('equal')
+                    elif plot_type == 'line':
+                        counts.sort_index().plot(kind='line', ax=ax)
+                        ax.set_ylabel("Count")
+                        ax.set_title(f"Line chart for {col}")
+
                     st.pyplot(fig)
 
-                else:
-                    st.warning("Unrecognized or missing action type.")
-
-            except Exception as e:
-                st.error(f"Failed to process your query: {e}")
-
-    st.session_state.chat_history.append(("assistant", str(parsed_query)))
-
-# Display chat history
-for role, message in st.session_state.chat_history:
-    with st.chat_message(role):
-        st.markdown(message)
+        except Exception as e:
+            st.error(f"Could not process the request: {e}")
