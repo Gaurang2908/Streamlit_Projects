@@ -8,10 +8,7 @@ numpy
 python-dotenv
 tiktoken
 pandas
-numpy
 matplotlib
 scikit-learn
 joblib
 xgboost
-ast
-re
