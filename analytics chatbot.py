@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import openai
 import ast
 import io
+import re
 
 # OpenAI settings
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -54,13 +55,28 @@ if uploaded_file is not None:
                 ]
             )
             parsed_text = completion.choices[0].message.content.strip()
-            query = ast.literal_eval(parsed_text)
+            try:
+                query = ast.literal_eval(parsed_text)
+            except Exception:
+                st.error("LLM returned invalid dictionary. Please try rephrasing.")
+                st.stop()
+
+            # Sanitize column names in filters
+            def quote_column_names(filter_str, df_columns):
+                for col in df_columns:
+                    pattern = r'\\b{}\\b'.format(re.escape(col))
+                    filter_str = re.sub(pattern, f"`{col}`", filter_str)
+                return filter_str
 
             # Filter logic
             if query['action'] == 'filter':
                 result = df.copy()
                 for f in query.get("filters", []):
-                    result = result.query(f)
+                    safe_filter = quote_column_names(f, df.columns)
+                    try:
+                        result = result.query(safe_filter)
+                    except Exception as e:
+                        st.warning(f"Filter failed: `{safe_filter}` — {e}")
                 st.markdown(f"### Filtered Result ({len(result)} rows)")
                 st.dataframe(result)
 
@@ -68,7 +84,12 @@ if uploaded_file is not None:
             elif query['action'] == 'plot':
                 result = df.copy()
                 for f in query.get("filters", []):
-                    result = result.query(f)
+                    safe_filter = quote_column_names(f, df.columns)
+                    try:
+                        result = result.query(safe_filter)
+                    except Exception as e:
+                        st.warning(f"Filter failed: `{safe_filter}` — {e}")
+
                 col = query.get("target_column")
                 plot_type = query.get("plot_type", "bar")
 
