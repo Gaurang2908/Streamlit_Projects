@@ -1,6 +1,4 @@
-# Pseudo GPT v2 - Hybrid Healthcare Analytics Assistant
-
-import streamlit as st
+import streamlit as stMore actions
 import pandas as pd
 import matplotlib.pyplot as plt
 import openai
@@ -100,42 +98,20 @@ if prompt:
             completion = client.chat.completions.create(
                 model=MODEL,
                 messages=[
+                    {"role": "system", "content": "You're a Python dictionary generator for data queries."},
                     {"role": "system", "content": "You're a Python dictionary generator for data queries. Always respond with a Python dictionary."},
                     {"role": "user", "content": query_instruction}
                 ]
             )
-            response_text = completion.choices[0].message.content.strip()
-
-            if not response_text.startswith("{") or not response_text.endswith("}"):
-                response = "Sorry, I can only respond to data-related queries or direct healthcare concepts."
-                with st.chat_message("assistant"):
-                    st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                st.stop()
-
-            try:
-                query = ast.literal_eval(response_text)
-            except Exception as e:
-                response = f"LLM returned an invalid dictionary. Error: {e}"
-                with st.chat_message("assistant"):
-                    st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                st.stop()
-
-            def quote_columns(expr, cols):
-                for col in cols:
-                    expr = re.sub(rf'\b{re.escape(col)}\b', f'`{col}`', expr)
-                return expr
-
-            if query.get("action") == "answer":
-                response = query.get("answer", "I don't know.")
-                with st.chat_message("assistant"):
-                    st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                st.stop()
+@@ -136,11 +136,14 @@
 
             result = df.copy()
             for f in query.get("filters", []):
+                safe_filter = quote_columns(f, df.columns)
+                try:
+                    result = result.query(safe_filter)
+                except Exception as e:
+                    st.warning(f"Filter failed: `{safe_filter}` — {e}")
                 if any(op in f for op in ["==", "!=", ">", "<", ">=", "<="]):
                     safe_filter = quote_columns(f, df.columns)
                     try:
@@ -147,36 +123,20 @@ if prompt:
 
             if query["action"] == "plot":
                 col = query.get("target_column")
-                plot_type = query.get("plot_type", "bar")
-                col = get_closest_column(col, df.columns) or col
-
-                if col not in result.columns:
-                    response = f"'{col}' not found in dataset."
+@@ -152,7 +155,7 @@
                 elif result[col].dropna().empty:
                     response = f"No data to plot in '{col}'."
                 else:
+                    fig, ax = plt.subplots(figsize=(5, 4))
                     fig, ax = plt.subplots(figsize=(4, 3))
                     counts = result[col].value_counts().sort_index()
 
                     if plot_type == "bar":
-                        counts.plot(kind="bar", ax=ax)
-                    elif plot_type == "pie":
-                        counts.plot(kind="pie", autopct="%1.1f%%", ax=ax)
-                        ax.axis("equal")
-                    elif plot_type == "line":
-                        counts.plot(kind="line", marker="o", ax=ax)
-                    elif plot_type == "hist":
-                        result[col].dropna().plot(kind="hist", bins=10, ax=ax)
-                    elif plot_type == "scatter":
-                        if len(result.columns) >= 2:
-                            x_col = result.columns[0]
-                            result.plot(kind="scatter", x=x_col, y=col, ax=ax)
-                        else:
-                            st.warning("Need at least 2 numeric columns for scatter plot.")
-                    elif plot_type == "area":
+@@ -174,18 +177,19 @@
                         counts.plot(kind="area", stacked=False, ax=ax)
 
                     ax.set_title(f"{plot_type.title()} chart for {col}")
+                    st.pyplot(fig)
                     st.pyplot(fig, use_container_width=True)
                     response = f"Plotted a {plot_type} chart for {col}."
 
