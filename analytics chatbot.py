@@ -1,3 +1,5 @@
+# Pseudo GPT - Healthcare Analytics Assistant (Patched)
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -54,9 +56,6 @@ if uploaded_file is not None:
             parsed_text = completion.choices[0].message.content.strip()
             query = ast.literal_eval(parsed_text)
 
-            st.session_state.chat_history.append({"role": "assistant", "content": str(query)})
-            st.chat_message("assistant").markdown(f"### Parsed Query\n```json\n{query}\n```")
-
             # Filter logic
             if query['action'] == 'filter':
                 result = df.copy()
@@ -99,9 +98,3 @@ if uploaded_file is not None:
 
         except Exception as e:
             st.error(f"Could not process the request: {e}")
-
-# Show chat history
-if "chat_history" in st.session_state:
-    with st.expander("Chat History"):
-        for msg in st.session_state.chat_history:
-            st.markdown(f"**{msg['role'].capitalize()}:** {msg['content']}")
