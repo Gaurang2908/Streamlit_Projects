@@ -121,7 +121,6 @@ if prompt:
 
             if query["action"] == "plot":
                 col = query.get("target_column")
-@@ -152,7 +155,7 @@
                 elif result[col].dropna().empty:
                     response = f"No data to plot in '{col}'."
                 else:
@@ -129,7 +128,6 @@ if prompt:
                     counts = result[col].value_counts().sort_index()
 
                     if plot_type == "bar":
-@@ -174,18 +177,19 @@
                         counts.plot(kind="area", stacked=False, ax=ax)
 
                     ax.set_title(f"{plot_type.title()} chart for {col}")
