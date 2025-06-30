@@ -52,11 +52,19 @@ if uploaded_file is not None:
 st.subheader("Conversation")
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "plots" not in st.session_state:
+    st.session_state.plots = []
 
 # Display history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
+
+# Display previous plots
+for plot in st.session_state.plots:
+    st.markdown("<div style='display: flex; justify-content: center; padding: 10px;'>", unsafe_allow_html=True)
+    st.pyplot(plot, use_container_width=False)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 prompt = st.chat_input("Ask a healthcare-related data question...")
 if prompt:
@@ -156,9 +164,12 @@ if prompt:
 
                     ax.set_title(f"{plot_type.title()} chart for {col}", fontsize=10)
                     fig.tight_layout()
+                    st.session_state.plots.append(fig)  # persist the figure
+
                     st.markdown("<div style='display: flex; justify-content: center; padding: 10px;'>", unsafe_allow_html=True)
                     st.pyplot(fig, use_container_width=False)
                     st.markdown("</div>", unsafe_allow_html=True)
+
                     response = f"Plotted a {plot_type} chart for {col}."
 
             elif query["action"] == "filter":
