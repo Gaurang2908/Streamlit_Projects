@@ -1,5 +1,3 @@
-# Pseudo GPT v2 - Hybrid Healthcare Analytics Assistant
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -40,7 +38,7 @@ def quote_columns(expr, cols):
 
 # App UI
 st.set_page_config(page_title="Pseudo GPT v2", layout="wide")
-st.title("Pseudo GPT v2 - Healthcare Data Assistant")
+st.title("Pseudo GPT v2")
 
 uploaded_file = st.file_uploader("Upload your healthcare dataset (CSV)", type=["csv"])
 df = None
@@ -139,11 +137,9 @@ if prompt:
                     counts = result[col].value_counts().sort_index()
 
                     if plot_type == "bar":
-                        counts.plot(kind="bar", ax=ax, color="#1f77b4")
-                        ax.set_ylabel("Count")
+                        counts.plot(kind="bar", ax=ax)
                     elif plot_type == "pie":
-                        counts.plot(kind="pie", autopct="%1.1f%%", ax=ax, textprops={"fontsize": 10})
-                        ax.set_ylabel("")
+                        counts.plot(kind="pie", autopct="%1.1f%%", ax=ax)
                         ax.axis("equal")
                     elif plot_type == "line":
                         counts.plot(kind="line", marker="o", ax=ax)
@@ -158,9 +154,11 @@ if prompt:
                     elif plot_type == "area":
                         counts.plot(kind="area", stacked=False, ax=ax)
 
-                    ax.set_title(f"{plot_type.title()} chart for {col}", fontsize=14)
+                    ax.set_title(f"{plot_type.title()} chart for {col}")
                     fig.tight_layout()
-                    st.pyplot(fig, use_container_width=True)
+                    st.markdown("<div style='display: flex; justify-content: center;'>", unsafe_allow_html=True)
+                    st.pyplot(fig, use_container_width=False)
+                    st.markdown("</div>", unsafe_allow_html=True)
                     response = f"Plotted a {plot_type} chart for {col}."
 
             elif query["action"] == "filter":
