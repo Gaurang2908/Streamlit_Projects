@@ -133,7 +133,7 @@ if prompt:
                 elif result[col].dropna().empty:
                     response = f"No data to plot in '{col}'."
                 else:
-                    fig, ax = plt.subplots(figsize=(3.5, 2.5))  # smaller figure
+                    fig, ax = plt.subplots(figsize=(3.5, 2.5))  # scaled down
                     counts = result[col].value_counts().sort_index()
 
                     if plot_type == "bar":
@@ -154,9 +154,9 @@ if prompt:
                     elif plot_type == "area":
                         counts.plot(kind="area", stacked=False, ax=ax)
 
-                    ax.set_title(f"{plot_type.title()} chart for {col}")
+                    ax.set_title(f"{plot_type.title()} chart for {col}", fontsize=10)
                     fig.tight_layout()
-                    st.markdown("<div style='display: flex; justify-content: center;'>", unsafe_allow_html=True)
+                    st.markdown("<div style='display: flex; justify-content: center; padding: 10px;'>", unsafe_allow_html=True)
                     st.pyplot(fig, use_container_width=False)
                     st.markdown("</div>", unsafe_allow_html=True)
                     response = f"Plotted a {plot_type} chart for {col}."
