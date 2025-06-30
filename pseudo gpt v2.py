@@ -1,3 +1,5 @@
+# Pseudo GPT v2 - Hybrid Healthcare Analytics Assistant
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -22,7 +24,7 @@ COLUMN_DEFINITIONS = {
     "Exercise Frequency (Days/week)": "How many days per week the patient exercises (0-7)",
     "Cholesterol level": "Total cholesterol level (HDL + LDL)",
     "Hospital visit data (for last year)": "Number of hospital visits in the past year",
-    "Readmissions within 30 days": "Yes/No for whether the patient was readmitted within 30 days"
+    "Readmissions within 30 days": "Yes/No for whether patient was readmitted within 30 days"
 }
 
 # Helper: Match fuzzy columns
@@ -133,13 +135,15 @@ if prompt:
                 elif result[col].dropna().empty:
                     response = f"No data to plot in '{col}'."
                 else:
-                    fig, ax = plt.subplots(figsize=(4, 3))
+                    fig, ax = plt.subplots(figsize=(6, 4))
                     counts = result[col].value_counts().sort_index()
 
                     if plot_type == "bar":
-                        counts.plot(kind="bar", ax=ax)
+                        counts.plot(kind="bar", ax=ax, color="#1f77b4")
+                        ax.set_ylabel("Count")
                     elif plot_type == "pie":
-                        counts.plot(kind="pie", autopct="%1.1f%%", ax=ax)
+                        counts.plot(kind="pie", autopct="%1.1f%%", ax=ax, textprops={"fontsize": 10})
+                        ax.set_ylabel("")
                         ax.axis("equal")
                     elif plot_type == "line":
                         counts.plot(kind="line", marker="o", ax=ax)
@@ -154,7 +158,8 @@ if prompt:
                     elif plot_type == "area":
                         counts.plot(kind="area", stacked=False, ax=ax)
 
-                    ax.set_title(f"{plot_type.title()} chart for {col}")
+                    ax.set_title(f"{plot_type.title()} chart for {col}", fontsize=14)
+                    fig.tight_layout()
                     st.pyplot(fig, use_container_width=True)
                     response = f"Plotted a {plot_type} chart for {col}."
 
